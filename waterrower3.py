@@ -6,6 +6,7 @@ from twisted.python import log
 class WaterRower3(protocol.Protocol):
     state = 'idle'
     datalog = []
+    sum_distance = 0
 
     packet_types = {
         0xfe: { "type": "distance",
@@ -31,7 +32,12 @@ class WaterRower3(protocol.Protocol):
         pass
 
     def pkt_distance(self, dist):
-        log.msg("got distance {0:d}".format(dist))
+        if dist == 60:
+            log.msg("ignoring large distance")
+        else:
+            self.sum_distance += dist
+        if dist > 0:
+            log.msg("got distance {0:d} cumm {1:d}".format(dist, self.sum_distance))
         self.msg_distance(dist)
 
     def pkt_strokespeed(self, strokes_min, speed_m_s):
@@ -39,19 +45,19 @@ class WaterRower3(protocol.Protocol):
         self.msg_strokespeed(strokes_min, speed_m_s)
 
     def pkt_endpowerstroke(self):
-        log.msg("got end of power stroke")
+#        log.msg("got end of power stroke")
         self.msg_endpowerstroke()
 
     def pkt_motorvoltage(self, pre_v, cur_v):
-        log.msg("got {0:d} previous voltage, {1:d} current voltage".format(pre_v, cur_v))
+#        log.msg("got {0:d} previous voltage, {1:d} current voltage".format(pre_v, cur_v))
         self.msg_motorvoltage(pre_v, cur_v)
 
     def pkt_unimplemented(self):
         pass
 
-    def state_idle(self, byte):
-        if byte & 0xf0:
-            print "packet type {0:x}".format(byte)
+    def new_packet(self, byte):
+        if byte & 0x80:
+#            print "packet type {0:x}".format(byte)
             if byte in self.packet_types.keys():
                 self.packet_type = self.packet_types[byte]
                 self.bytes_recv = 0
@@ -63,7 +69,15 @@ class WaterRower3(protocol.Protocol):
         print "unknown packet type {0:x}".format(byte)
         return('idle')
 
+    def state_idle(self, byte):
+        return(self.new_packet(byte))
+
     def state_inpacket(self, byte):
+        if byte & 0x80:
+            log.msg("unexpected new packet {0:x}".format(byte))
+            self.parse_packet()
+            return(self.new_packet(byte))
+
 #        print "writing to %i" % self.bytes_recv
         self.buf[self.bytes_recv] = byte
         self.bytes_recv += 1
