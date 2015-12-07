@@ -76,7 +76,7 @@ class WaterRower3(protocol.Protocol):
     def state_inpacket(self, byte):
         if byte >= 0xf0:
             log.msg("unexpected new packet {0:x}".format(byte))
-            self.parse_packet()
+            self.parse_packet(incomplete=True)
             return(self.new_packet(byte))
 
 #        print "writing to %i" % self.bytes_recv
@@ -88,22 +88,25 @@ class WaterRower3(protocol.Protocol):
             return('idle')
         return('inpacket')
 
-    def parse_packet(self):
-        args = [self.buf[i] for i in range(0, self.packet_type["len"], 1)]
-        getattr(self, 'pkt_'+self.packet_type["type"])(*args)
+    def parse_packet(self, incomplete=False):
+        if incomplete:
+            log.msg("incomplete packet "+self.dump_packet())
+        self.datalogfile.write("{0}: {1}\n".format(datetime.datetime.now().isoformat(), self.dump_packet()))
+        self.datalogfile.flush()
+        getattr(self, 'pkt_'+self.packet_type["type"])(*self.buf)
+
+    def dump_packet(self):
+        return("{:02x}: ".format(self.packet_idnum)+
+            " ".join(["{0["+str(i)+"]:02x}" for i in range(0,len(self.buf))]).format(self.buf[len(self.buf)*-1:]))
 
     def connectionMade(self):
-        self.datalogfile = open("datalog-{}.log".format(datetime.datetime.now().replace(microsecond=0).isoformat()),'w')
+        self.datalogfile = open("datalog2-{}.log".format(datetime.datetime.now().replace(microsecond=0).isoformat()),'w')
 
     def dataReceived(self, data):
         for c in data:
             b = ord(c)
-            self.datalogfile.write("{:02x} ".format(b))
-            self.datalogfile.flush()
             self.datalog.append(b)
             if len(self.datalog) % 16 == 0:
                 print " ".join(["{0["+str(i)+"]:02x}" for i in range(0,16)]).format(self.datalog[-16:])
-                self.datalogfile.write("\n")
-                self.datalogfile.flush()
 #            print "read {:02X}".format(b)
             self.state = getattr(self, 'state_'+self.state)(b)
