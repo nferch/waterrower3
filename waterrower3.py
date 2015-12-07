@@ -59,12 +59,13 @@ class WaterRower3(protocol.Protocol):
         if byte >= 0xf0:
 #            print "packet type {0:x}".format(byte)
             if byte in self.packet_types.keys():
+                self.packet_idnum = byte
                 self.packet_type = self.packet_types[byte]
                 self.bytes_recv = 0
+                self.buf = [0] * self.packet_type["len"]
                 if self.packet_type["len"] == 0:
                     self.parse_packet()
                     return('idle')
-                self.buf = [0] * self.packet_type["len"]
                 return('inpacket')
         print "unknown packet type {0:x}".format(byte)
         return('idle')
