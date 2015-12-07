@@ -56,7 +56,7 @@ class WaterRower3(protocol.Protocol):
         pass
 
     def new_packet(self, byte):
-        if byte & 0x80:
+        if byte >= 0xf0:
 #            print "packet type {0:x}".format(byte)
             if byte in self.packet_types.keys():
                 self.packet_type = self.packet_types[byte]
@@ -73,7 +73,7 @@ class WaterRower3(protocol.Protocol):
         return(self.new_packet(byte))
 
     def state_inpacket(self, byte):
-        if byte & 0x80:
+        if byte >= 0xf0:
             log.msg("unexpected new packet {0:x}".format(byte))
             self.parse_packet()
             return(self.new_packet(byte))
