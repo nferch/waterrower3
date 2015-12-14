@@ -1,5 +1,6 @@
 #! /usr/bin/env python2.7
 
+import argparse
 import datetime
 import sys
 
@@ -18,9 +19,16 @@ class InternetWaterRower(waterrower3.WaterRower3):
 #        log.msg("got strokespeed %i %i" % (strokes_min, speed_m_s))
 #
 
+parser = argparse.ArgumentParser(description="WaterRower monitor")
+
+parser.add_argument("-p", "--port", dest="serial_port", default="/dev/ttyUSB0")
+parser.add_argument("-s", "--speed", dest="speed", default=1200)
+
+opts = parser.parse_args()
+
 log.startLogging(sys.stdout)
 log.addObserver(log.FileLogObserver(file("foo-{}.log".format(datetime.datetime.now().replace(microsecond=0).isoformat()),'w')).emit)
 
-SerialPort(InternetWaterRower(), "/dev/ttyUSB0", reactor, baudrate=1200)
+SerialPort(InternetWaterRower(), opts.serial_port, reactor, baudrate=opts.speed)
 
 reactor.run()
