@@ -4,10 +4,11 @@ import argparse
 import datetime
 import sys
 
-import waterrower3.serial_interface as wr3_serial_interface
 from twisted.python import log
 from twisted.internet import reactor
 from twisted.internet.serialport import SerialPort
+import waterrower3.serial_interface as wr3_serial_interface
+
 
 class InternetWaterRower(wr3_serial_interface.SerialProtocol):
     def msg_powerstroke(self):
@@ -27,8 +28,13 @@ parser.add_argument("-s", "--speed", dest="speed", default=1200)
 opts = parser.parse_args()
 
 log.startLogging(sys.stdout)
-log.addObserver(log.FileLogObserver(file("foo-{}.log".format(datetime.datetime.now().replace(microsecond=0).isoformat()),'w')).emit)
+log.addObserver(
+    log.FileLogObserver(
+        file("foo-{}.log".format(
+            datetime.datetime.now().replace(microsecond=0).isoformat()), 'w')
+        ).emit)
 
-SerialPort(InternetWaterRower(), opts.serial_port, reactor, baudrate=opts.speed)
+SerialPort(InternetWaterRower(), opts.serial_port, reactor,
+           baudrate=opts.speed)
 
 reactor.run()

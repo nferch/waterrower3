@@ -3,23 +3,24 @@ import datetime
 from twisted.internet import protocol
 from twisted.python import log
 
+
 class Packet(object):
     PACKET_TYPES = {
-        0xfe: { "type": "distance",
-                "len": 1 },
-        0xff: { "type": "strokespeed",
-                "len": 2 },
-        0xfd: { "type": "motorvoltage",
-                "len": 2 },
-        0xfc: { "type": "endpowerstroke",
-                "len": 0 },
+        0xfe: {"type": "distance",
+               "len": 1},
+        0xff: {"type": "strokespeed",
+               "len": 2},
+        0xfd: {"type": "motorvoltage",
+               "len": 2},
+        0xfc: {"type": "endpowerstroke",
+               "len": 0},
     }
+
 
 class SerialProtocol(protocol.Protocol):
     state = 'idle'
     datalog = []
     sum_distance = 0
-
 
     def msg_distance(self, dist):
         pass
@@ -39,11 +40,13 @@ class SerialProtocol(protocol.Protocol):
         else:
             self.sum_distance += dist
         if dist > 0:
-            log.msg("got distance {0:d} cumm {1:d}".format(dist, self.sum_distance))
+            log.msg("got distance {0:d} cumm {1:d}"
+                    .format(dist, self.sum_distance))
         self.msg_distance(dist)
 
     def pkt_strokespeed(self, strokes_min, speed_m_s):
-        log.msg("got {0:d} strokes/min, {1:d} m/s".format(strokes_min, speed_m_s))
+        log.msg("got {0:d} strokes/min, {1:d} m/s"
+                .format(strokes_min, speed_m_s))
         self.msg_strokespeed(strokes_min, speed_m_s)
 
     def pkt_endpowerstroke(self):
@@ -93,22 +96,31 @@ class SerialProtocol(protocol.Protocol):
     def parse_packet(self, incomplete=False):
         if incomplete:
             log.msg("incomplete packet "+self.dump_packet())
-        self.datalogfile.write("{0}: {1}\n".format(datetime.datetime.now().isoformat(), self.dump_packet()))
+        self.datalogfile.write(
+            "{0}: {1}\n"
+            .format(datetime.datetime.now().isoformat(), self.dump_packet()))
         self.datalogfile.flush()
         getattr(self, 'pkt_'+self.packet_type["type"])(*self.buf)
 
     def dump_packet(self):
-        return("{:02x}: ".format(self.packet_idnum)+
-            " ".join(["{0["+str(i)+"]:02x}" for i in range(0,len(self.buf))]).format(self.buf[len(self.buf)*-1:]))
+        return("{:02x}: ".format(self.packet_idnum) +
+               " ".join(
+                   ["{0["+str(i)+"]:02x}" for i in range(0, len(self.buf))])
+               .format(self.buf[len(self.buf)*-1:]))
 
     def connectionMade(self):
-        self.datalogfile = open("datalog2-{}.log".format(datetime.datetime.now().replace(microsecond=0).isoformat()),'w')
+        self.datalogfile = open(
+            "datalog2-{}.log"
+            .format(datetime.datetime.now()
+                    .replace(microsecond=0).isoformat()),
+            'w')
 
     def dataReceived(self, data):
         for c in data:
             b = ord(c)
             self.datalog.append(b)
             if len(self.datalog) % 16 == 0:
-                print " ".join(["{0["+str(i)+"]:02x}" for i in range(0,16)]).format(self.datalog[-16:])
+                print " ".join(["{0["+str(i)+"]:02x}" for i in range(0, 16)]) \
+                    .format(self.datalog[-16:])
 #            print "read {:02X}".format(b)
             self.state = getattr(self, 'state_'+self.state)(b)
