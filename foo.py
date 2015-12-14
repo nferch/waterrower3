@@ -4,12 +4,12 @@ import argparse
 import datetime
 import sys
 
-import waterrower3
+import waterrower3.serial_interface as wr3_serial_interface
 from twisted.python import log
 from twisted.internet import reactor
 from twisted.internet.serialport import SerialPort
 
-class InternetWaterRower(waterrower3.WaterRower3):
+class InternetWaterRower(wr3_serial_interface.SerialProtocol):
     def msg_powerstroke(self):
         pass
 #    def msg_distance(self, dist):

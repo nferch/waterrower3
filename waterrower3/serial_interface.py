@@ -3,12 +3,8 @@ import datetime
 from twisted.internet import protocol
 from twisted.python import log
 
-class WaterRower3(protocol.Protocol):
-    state = 'idle'
-    datalog = []
-    sum_distance = 0
-
-    packet_types = {
+class Packet(object):
+    PACKET_TYPES = {
         0xfe: { "type": "distance",
                 "len": 1 },
         0xff: { "type": "strokespeed",
@@ -18,6 +14,12 @@ class WaterRower3(protocol.Protocol):
         0xfc: { "type": "endpowerstroke",
                 "len": 0 },
     }
+
+class SerialProtocol(protocol.Protocol):
+    state = 'idle'
+    datalog = []
+    sum_distance = 0
+
 
     def msg_distance(self, dist):
         pass
@@ -58,9 +60,9 @@ class WaterRower3(protocol.Protocol):
     def new_packet(self, byte):
         if byte >= 0xf0:
 #            print "packet type {0:x}".format(byte)
-            if byte in self.packet_types.keys():
+            if byte in Packet.PACKET_TYPES.keys():
                 self.packet_idnum = byte
-                self.packet_type = self.packet_types[byte]
+                self.packet_type = Packet.PACKET_TYPES[byte]
                 self.bytes_recv = 0
                 self.buf = [0] * self.packet_type["len"]
                 if self.packet_type["len"] == 0:
