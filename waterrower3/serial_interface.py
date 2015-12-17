@@ -1,68 +1,20 @@
 import datetime
 
-from twisted.internet import protocol
 from twisted.python import log
+import waterrower3.session as wr3_session
+from waterrower3.packet import Packet
 
 
-class Packet(object):
-    PACKET_TYPES = {
-        0xfe: {"type": "distance",
-               "len": 1},
-        0xff: {"type": "strokespeed",
-               "len": 2},
-        0xfd: {"type": "motorvoltage",
-               "len": 2},
-        0xfc: {"type": "endpowerstroke",
-               "len": 0},
-    }
-
-
-class SerialProtocol(protocol.Protocol):
+class SerialProtocol(wr3_session.RowerSession):
     state = 'idle'
     datalog = []
-    sum_distance = 0
 
-    def msg_distance(self, dist):
-        pass
-
-    def msg_strokespeed(self, strokes_min, speed_m_s):
-        pass
-
-    def msg_endpowerstroke(self):
-        pass
-
-    def msg_motorvoltage(self, pre_v, cur_v):
-        pass
-
-    def pkt_distance(self, dist):
-        if dist == 60:
-            log.msg("ignoring large distance")
-        else:
-            self.sum_distance += dist
-        if dist > 0:
-            log.msg("got distance {0:d} cumm {1:d}"
-                    .format(dist, self.sum_distance))
-        self.msg_distance(dist)
-
-    def pkt_strokespeed(self, strokes_min, speed_m_s):
-        log.msg("got {0:d} strokes/min, {1:d} m/s"
-                .format(strokes_min, speed_m_s))
-        self.msg_strokespeed(strokes_min, speed_m_s)
-
-    def pkt_endpowerstroke(self):
-#        log.msg("got end of power stroke")
-        self.msg_endpowerstroke()
-
-    def pkt_motorvoltage(self, pre_v, cur_v):
-#        log.msg("got {0:d} previous voltage, {1:d} current voltage".format(pre_v, cur_v))
-        self.msg_motorvoltage(pre_v, cur_v)
-
-    def pkt_unimplemented(self):
-        pass
+    def packet_received(self, p):
+        raise NotImplementedError
 
     def new_packet(self, byte):
         if byte >= 0xf0:
-#            print "packet type {0:x}".format(byte)
+            # print "packet type {0:x}".format(byte)
             if byte in Packet.PACKET_TYPES.keys():
                 self.packet_idnum = byte
                 self.packet_type = Packet.PACKET_TYPES[byte]
@@ -93,14 +45,21 @@ class SerialProtocol(protocol.Protocol):
             return('idle')
         return('inpacket')
 
+    def get_timestamp(self):
+        return(datetime.datetime.now())
+
     def parse_packet(self, incomplete=False):
         if incomplete:
             log.msg("incomplete packet "+self.dump_packet())
+        ts = self.get_timestamp()
         self.datalogfile.write(
             "{0}: {1}\n"
-            .format(datetime.datetime.now().isoformat(), self.dump_packet()))
+            .format(ts.isoformat(), self.dump_packet()))
         self.datalogfile.flush()
-        getattr(self, 'pkt_'+self.packet_type["type"])(*self.buf)
+        p = Packet(ts)
+        p.type = self.packet_type["type"]
+        p.parse(self.buf)
+        self.packet_received(p)
 
     def dump_packet(self):
         return("{:02x}: ".format(self.packet_idnum) +
