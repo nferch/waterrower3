@@ -1,4 +1,5 @@
 coverage
+mock
 flake8
 nose
 unittest2
