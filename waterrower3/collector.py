@@ -20,21 +20,30 @@ class InternetWaterRower(wr3_serial_interface.SerialProtocol):
 #        log.msg("got strokespeed %i %i" % (strokes_min, speed_m_s))
 #
 
-parser = argparse.ArgumentParser(description="WaterRower monitor")
 
-parser.add_argument("-p", "--port", dest="serial_port", default="/dev/ttyUSB0")
-parser.add_argument("-s", "--speed", dest="speed", default=1200)
+def main():
+    parser = argparse.ArgumentParser(description="WaterRower monitor")
 
-opts = parser.parse_args()
+    parser.add_argument("-p", "--port", dest="serial_port",
+                        default="/dev/ttyUSB0")
+    parser.add_argument("-s", "--speed", dest="speed", default=1200)
 
-log.startLogging(sys.stdout)
-log.addObserver(
-    log.FileLogObserver(
-        file("foo-{}.log".format(
-            datetime.datetime.now().replace(microsecond=0).isoformat()), 'w')
-        ).emit)
+    opts = parser.parse_args()
 
-SerialPort(InternetWaterRower(), opts.serial_port, reactor,
-           baudrate=opts.speed)
+    log.startLogging(sys.stdout)
+    log.addObserver(
+        log.FileLogObserver(
+            file(
+                "foo-{}.log".format(
+                    datetime.datetime.now().replace(microsecond=0).isoformat()),
+                'w')
+            ).emit)
 
-reactor.run()
+    SerialPort(InternetWaterRower(), opts.serial_port, reactor,
+               baudrate=opts.speed)
+
+    reactor.run()
+
+
+if __name__ == '__main__':
+    main()
