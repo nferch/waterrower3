@@ -1,2 +1,5 @@
 pyserial
 twisted
+gspread
+oauth2client
+PyOpenSSL
