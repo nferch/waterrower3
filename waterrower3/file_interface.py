@@ -16,3 +16,4 @@ class ReplayFile(object):
             p = wr3_packet.Packet(ts)
             p.parse_bin(bin_data)
             self.proto.packet_received(p)
+        self.proto.session_end()

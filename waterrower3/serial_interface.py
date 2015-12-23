@@ -9,9 +9,6 @@ class SerialProtocol(wr3_session.RowerSession):
     state = 'idle'
     datalog = []
 
-    def packet_received(self, p):
-        raise NotImplementedError
-
     def new_packet(self, byte):
         if byte >= 0xf0:
             # print "packet type {0:x}".format(byte)
