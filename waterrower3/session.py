@@ -17,19 +17,25 @@ class RowerSession(protocol.Protocol):
             self.last_stroke = packet.timestamp
         getattr(self, 'pkt_'+packet.type)(packet)
 
+    def longest(self, thing):
+        thing = self.lulls if thing == 'lull' else self.intervals
+        longest = [0]
+        for l in thing:
+            if l[0] > longest[0]:
+                longest = l
+        return(longest if longest != [0] else [])
+
+    def total_time(self):
+        return((self.last_stroke - self.first_stroke).seconds)
+
+    def total_distance(self):
+        return(self.distance/4000.0)
+
     def session_end(self):
-        longest_lull = [0]
-        longest_interval = [0]
-        for l in self.lulls:
-            if l[0] > longest_lull[0]:
-                longest_lull = l
-        for l in self.intervals:
-            if l[0] > longest_interval[0]:
-                longest_interval = l
-        log.msg("longest lull: {} at {}".format(*longest_lull))
-        log.msg("longest interval: {} at {}".format(*longest_interval))
-        log.msg("total time: {}".format(self.last_stroke - self.first_stroke))
-        log.msg("total distance: {}".format((self.distance/4000.0)))
+        log.msg("longest lull: {} at {}".format(*self.longest("lull")))
+        log.msg("longest interval: {} at {}".format(*self.longest("interval")))
+        log.msg("total time: {}".format(self.total_time()))
+        log.msg("total distance: {}".format(self.total_distance()))
 
     def pkt_motorvoltage(self, packet):
         pass
