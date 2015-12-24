@@ -11,6 +11,11 @@ import waterrower3.serial_interface as wr3_serial_interface
 
 
 class InternetWaterRower(wr3_serial_interface.SerialProtocol):
+    def __init__(self, record_datalog=True):
+        return(
+            wr3_serial_interface.SerialProtocol.__init__(
+                self, record_datalog=record_datalog))
+
     def msg_powerstroke(self):
         pass
 #    def msg_distance(self, dist):
@@ -27,6 +32,8 @@ def main():
     parser.add_argument("-p", "--port", dest="serial_port",
                         default="/dev/ttyUSB0")
     parser.add_argument("-s", "--speed", dest="speed", default=1200)
+    parser.add_argument("-n", "--nodatalog", dest="record_datalog",
+                        action='store_false')
 
     opts = parser.parse_args()
 
@@ -39,8 +46,9 @@ def main():
                 'w')
             ).emit)
 
-    SerialPort(InternetWaterRower(), opts.serial_port, reactor,
-               baudrate=opts.speed)
+    SerialPort(
+        InternetWaterRower(record_datalog=opts.record_datalog),
+        opts.serial_port, reactor, baudrate=opts.speed)
 
     reactor.run()
 

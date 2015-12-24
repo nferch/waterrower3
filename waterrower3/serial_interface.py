@@ -9,6 +9,10 @@ class SerialProtocol(wr3_session.RowerSession):
     state = 'idle'
     datalog = []
 
+    def __init__(self, record_datalog=True):
+        self.record_datalog = record_datalog
+        return(wr3_session.RowerSession.__init__(self))
+
     def new_packet(self, byte):
         if byte >= 0xf0:
             # print "packet type {0:x}".format(byte)
@@ -49,10 +53,11 @@ class SerialProtocol(wr3_session.RowerSession):
         if incomplete:
             log.msg("incomplete packet "+self.dump_packet())
         ts = self.get_timestamp()
-        self.datalogfile.write(
-            "{0}: {1}\n"
-            .format(ts.isoformat(), self.dump_packet()))
-        self.datalogfile.flush()
+        if self.record_datalog:
+            self.datalogfile.write(
+                "{0}: {1}\n"
+                .format(ts.isoformat(), self.dump_packet()))
+            self.datalogfile.flush()
         p = Packet(ts)
         p.type = self.packet_type["type"]
         p.parse(self.buf)
@@ -65,11 +70,12 @@ class SerialProtocol(wr3_session.RowerSession):
                .format(self.buf[len(self.buf)*-1:]))
 
     def connectionMade(self):
-        self.datalogfile = open(
-            "datalog2-{}.log"
-            .format(datetime.datetime.now()
-                    .replace(microsecond=0).isoformat()),
-            'w')
+        if self.record_datalog:
+            self.datalogfile = open(
+                "datalog2-{}.log"
+                .format(datetime.datetime.now()
+                        .replace(microsecond=0).isoformat()),
+                'w')
 
     def dataReceived(self, data):
         for c in data:
