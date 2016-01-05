@@ -4,6 +4,9 @@ from twisted.python import log
 
 class RowerSession(protocol.Protocol):
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.distance = 0
         self.first_stroke = None
         self.last_stroke = None
@@ -16,6 +19,8 @@ class RowerSession(protocol.Protocol):
             self.first_stroke = packet.timestamp
             self.last_stroke = packet.timestamp
         getattr(self, 'pkt_'+packet.type)(packet)
+        if self.updatecallback:
+            self.updatecallback.update_session()
 
     def longest(self, thing):
         thing = self.lulls if thing == 'lull' else self.intervals
