@@ -1,8 +1,8 @@
 #! /usr/bin/env python2.7
 
 import argparse
+import curses
 import datetime
-import sys
 
 from twisted.python import log
 from twisted.internet import reactor
@@ -10,20 +10,103 @@ from twisted.internet.serialport import SerialPort
 import waterrower3.serial_interface as wr3_serial_interface
 
 
+class CursesStdIO(object):
+    def fileno(self):
+        return(0)
+
+    def doRead(self):
+        pass
+
+    def logPrefix(self):
+        return('CursesClient')
+
+
+class InternetWaterRowerConsole(CursesStdIO):
+    def __init__(self, stdscr, session):
+        self.timer = 0
+        self.stdscr = stdscr
+
+        self.setup_screen()
+
+        self.session = session
+        self.session.updatecallback = self
+
+    def connectionLost(self, _):
+        self.close()
+
+    def doRead(self):
+        curses.noecho()
+        c = self.stdscr.getch()
+
+        if chr(c) == "r":
+            self.reset()
+
+        self.stdscr.addstr(0, 0, chr(c))
+        self.paint()
+
+    def setup_screen(self):
+        self.stdscr.nodelay(1)
+        curses.cbreak()
+        self.stdscr.keypad(1)
+        curses.curs_set(0)
+
+        self.rows, self.cols = self.stdscr.getmaxyx()
+        self.lines = []
+        self.paint()
+
+    def cleanup_screen(self):
+        curses.nocbreak()
+        self.stdscr.keypad(0)
+        curses.echo()
+        curses.endwin()
+
+    def paint(self):
+        self.stdscr.addstr(1, 0, str(datetime.datetime.now()))
+        self.stdscr.refresh()
+
+    def update_session(self):
+        self.stdscr.addstr(
+            2, 0,
+            self.format_sec(self.session.total_time()))
+        self.stdscr.addstr(
+            3, 0,
+            "{:1.3f}".format(self.session.total_distance()))
+        self.stdscr.addstr(
+            4, 0,
+            "Longest Lull: " + self.format_longest(
+                self.session.longest("lull")))
+        self.stdscr.addstr(
+            5, 0,
+            "Longest Interval: " + self.format_longest(
+                self.session.longest("interval")))
+        self.paint()
+
+    def format_sec(self, time_sec):
+        return("{0:02}:{1:02}".format(time_sec / 60, time_sec % 60))
+
+    def format_timedelta(self, timestamp):
+        return("{}s ago".format((datetime.datetime.now() - timestamp).seconds))
+
+    def format_longest(self, longest):
+        if longest:
+            return("{} at {}".format(
+                self.format_sec(
+                    longest[0]), self.format_timedelta(longest[1])))
+        else:
+            return("")
+
+    def reset(self):
+        self.session.reset()
+
+    def close(self):
+        self.cleanup_screen()
+
+
 class InternetWaterRower(wr3_serial_interface.SerialProtocol):
     def __init__(self, record_datalog=True):
         return(
             wr3_serial_interface.SerialProtocol.__init__(
                 self, record_datalog=record_datalog))
-
-    def msg_powerstroke(self):
-        pass
-#    def msg_distance(self, dist):
-#        log.msg("got distance %i" % dist)
-#
-#    def msg_strokespeed(self, strokes_min, speed_m_s):
-#        log.msg("got strokespeed %i %i" % (strokes_min, speed_m_s))
-#
 
 
 def main():
@@ -37,20 +120,21 @@ def main():
 
     opts = parser.parse_args()
 
-    log.startLogging(sys.stdout)
-    log.addObserver(
-        log.FileLogObserver(
-            file(
-                "foo-{}.log".format(
-                    datetime.datetime.now().replace(microsecond=0).isoformat()),
-                'w')
-            ).emit)
+    log.startLogging(file(
+        "collector-{}.log".format(
+            datetime.datetime.now().replace(microsecond=0).isoformat()),
+        'w'))
 
-    SerialPort(
-        InternetWaterRower(record_datalog=opts.record_datalog),
-        opts.serial_port, reactor, baudrate=opts.speed)
+    stdscr = curses.initscr()
+    session = InternetWaterRower(record_datalog=opts.record_datalog)
+    cons = InternetWaterRowerConsole(stdscr, session)
+    stdscr.refresh()
+
+    reactor.addReader(cons)
+    SerialPort(session, opts.serial_port, reactor, baudrate=opts.speed)
 
     reactor.run()
+    cons.close()
 
 
 if __name__ == '__main__':
