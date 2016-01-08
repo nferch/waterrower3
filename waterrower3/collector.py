@@ -8,6 +8,7 @@ from twisted.python import log
 from twisted.internet import reactor
 from twisted.internet.serialport import SerialPort
 import waterrower3.serial_interface as wr3_serial_interface
+from waterrower3 import util
 
 
 class CursesStdIO(object):
@@ -67,33 +68,19 @@ class InternetWaterRowerConsole(CursesStdIO):
     def update_session(self):
         self.stdscr.addstr(
             2, 0,
-            self.format_sec(self.session.total_time()))
+            util.format_sec(self.session.total_time()))
         self.stdscr.addstr(
             3, 0,
             "{:1.3f}".format(self.session.total_distance()))
         self.stdscr.addstr(
             4, 0,
-            "Longest Lull: " + self.format_longest(
+            "Longest Lull: " + util.format_longest(
                 self.session.longest("lull")))
         self.stdscr.addstr(
             5, 0,
-            "Longest Interval: " + self.format_longest(
+            "Longest Interval: " + util.format_longest(
                 self.session.longest("interval")))
         self.paint()
-
-    def format_sec(self, time_sec):
-        return("{0:02}:{1:02}".format(time_sec / 60, time_sec % 60))
-
-    def format_timedelta(self, timestamp):
-        return("{}s ago".format((datetime.datetime.now() - timestamp).seconds))
-
-    def format_longest(self, longest):
-        if longest:
-            return("{} at {}".format(
-                self.format_sec(
-                    longest[0]), self.format_timedelta(longest[1])))
-        else:
-            return("")
 
     def reset(self):
         self.session.reset()
