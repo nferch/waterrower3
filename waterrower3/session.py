@@ -3,6 +3,8 @@ from twisted.python import log
 
 
 class RowerSession(protocol.Protocol):
+    updatecallback = None
+
     def __init__(self):
         self.reset()
 
