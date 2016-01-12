@@ -22,13 +22,14 @@ class RowerReplaySession(wr3_session.RowerSession):
         print "longest interval: {} at {}".format(*self.longest("interval"))
         print "total time: {}".format(self.total_time())
         print "total distance: {}".format(self.total_distance())
-        self.update_google_spreadsheet()
+        if self.creds_filename and self.spreadsheet_name:
+            print "Adding to Google Spreadsheet"
+            self.update_google_spreadsheet()
 
     def update_google_spreadsheet(self):
-        if self.creds_filename and self.spreadsheet_name:
-            gc = wr3_google_sheets.GoogleSheetsConnector(self.creds_filename)
-            gsu = wr3_google_sheets.GoogleSheetsUpdater(
-                gc, self.spreadsheet_name)
+        gc = wr3_google_sheets.GoogleSheetsConnector(self.creds_filename)
+        gsu = wr3_google_sheets.GoogleSheetsUpdater(
+            gc, self.spreadsheet_name)
 
         gsu.update({
             "Date": self.first_stroke.strftime("%x"),

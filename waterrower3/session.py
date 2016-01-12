@@ -52,10 +52,12 @@ class RowerSession(protocol.Protocol):
         if stroke_delay > 5:
             log.msg("detected lull of {}".format(stroke_delay))
             self.lulls.append([stroke_delay, packet.timestamp])
-            interval_time = (self.last_stroke - self.interval_started).seconds
-            log.msg("last interval time {}".format(interval_time))
-            self.intervals.append([interval_time, self.last_stroke])
-            self.interval_started = None
+            if self.interval_started:
+                interval_time = (self.last_stroke -
+                                 self.interval_started).seconds
+                log.msg("last interval time {}".format(interval_time))
+                self.intervals.append([interval_time, self.last_stroke])
+                self.interval_started = None
         elif not self.interval_started:
             self.interval_started = packet.timestamp
         self.last_stroke = packet.timestamp

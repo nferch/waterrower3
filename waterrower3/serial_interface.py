@@ -56,7 +56,8 @@ class SerialProtocol(wr3_session.RowerSession):
         if self.record_datalog:
             self.datalogfile.write(
                 "{0}: {1}\n"
-                .format(ts.isoformat(), self.dump_packet()))
+                .format(
+                    ts.strftime("%Y-%m-%dT%H:%M:%S.%f"), self.dump_packet()))
             self.datalogfile.flush()
         p = Packet(ts)
         p.type = self.packet_type["type"]
