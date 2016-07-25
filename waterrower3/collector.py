@@ -109,28 +109,30 @@ class InternetWaterRowerConsole(CursesStdIO):
 
 class InternetWaterRower(wr3_serial_interface.SerialProtocol):
     def __init__(self, record_datalog=True, creds_filename=None,
-                 spreadsheet_name=None):
+                 spreadsheet_name=None, bucket_name=None):
         self.creds_filename = creds_filename
         self.spreadsheet_name = spreadsheet_name
+        self.bucket_name = bucket_name
         return(
             wr3_serial_interface.SerialProtocol.__init__(
                 self, record_datalog=record_datalog))
 
     def session_end(self):
+        wr3_serial_interface.SerialProtocol.session_end(self)
         if self.creds_filename and self.spreadsheet_name:
             print "Adding to Google Spreadsheet"
             self.update_google_spreadsheet()
-        wr3_serial_interface.SerialProtocol.session_end(self)
 
     def update_google_spreadsheet(self):
         gc = wr3_google_sheets.GoogleSheetsConnector(self.creds_filename)
         gsu = wr3_google_sheets.GoogleSheetsUpdater(
-            gc, self.spreadsheet_name)
+            gc, self.spreadsheet_name, self.bucket_name)
 
         update_data = {
             "Date": self.first_stroke.strftime("%x"),
             "Distance": "{:1.3f}".format(self.total_distance()),
-            "Time": util.format_time(self.total_time())}
+            "Time": util.format_time(self.total_time()),
+            "Datalog filename": self.datalogfilename}
 
         if self.longest("lull"):
             update_data["Longest Lull"] = util.format_sec(
@@ -139,7 +141,8 @@ class InternetWaterRower(wr3_serial_interface.SerialProtocol):
             update_data["Longest Interval"] = util.format_sec(
                 self.longest("interval")[0])
 
-        gsu.update(update_data)
+        gsu.update_spreadsheet(update_data)
+        gsu.upload_datalog(self.datalogfilename)
 
 
 def main():
@@ -153,6 +156,8 @@ def main():
     parser.add_argument("-c", "--creds_filename",
                         help="Name of Google credentials file")
     parser.add_argument("-g", "--name", help="Name of Google Spreadsheet")
+    parser.add_argument("-b", "--bucket",
+                        help="Name of Google Cloud Storage bucket")
 
     opts = parser.parse_args()
 
@@ -165,7 +170,8 @@ def main():
     session = InternetWaterRower(
         record_datalog=opts.record_datalog,
         creds_filename=opts.creds_filename,
-        spreadsheet_name=opts.name)
+        spreadsheet_name=opts.name,
+        bucket_name=opts.bucket)
     cons = InternetWaterRowerConsole(stdscr, session)
     stdscr.refresh()
 
