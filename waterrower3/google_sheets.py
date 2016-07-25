@@ -1,31 +1,44 @@
-import json
-
-
 import gspread
-import oauth2client.client as oauth2_client
+from googleapiclient import discovery
+from googleapiclient import http
+from oauth2client.service_account import ServiceAccountCredentials
+
+
+SCOPES = ['https://www.googleapis.com/auth/devstorage.read_write',
+          'https://spreadsheets.google.com/feeds']
 
 
 class GoogleSheetsConnector(object):
     def __init__(self, creds_file):
-        json_key = json.load(open(creds_file))
-        scope = ['https://spreadsheets.google.com/feeds']
 
-        creds = oauth2_client.SignedJwtAssertionCredentials(
-            json_key['client_email'],
-            json_key['private_key'].encode(),
-            scope)
-
-        self.gc = gspread.authorize(creds)
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(
+            creds_file, SCOPES)
+        self.gc = gspread.authorize(credentials)
+        self.storage_service = discovery.build('storage', 'v1',
+                                               credentials=credentials)
 
 
 class GoogleSheetsUpdater(object):
     MAX_HEADER_ROW_SEARCH = 5
 
-    def __init__(self, gc, sheet):
+    def __init__(self, gc, sheet, bucket_name):
         self.gc = gc
         self.wks = self.gc.gc.open(sheet).sheet1
+        self.bucket_name = bucket_name
 
-    def update(self, update_data):
+    def upload_datalog(self, filename):
+        body = {'name': filename, }
+
+        with open(filename, 'rb') as f:
+            req = self.gc.storage_service.objects().insert(
+                bucket=self.bucket_name, body=body,
+                media_body=http.MediaIoBaseUpload(f,
+                                                  'application/octet-stream'))
+            resp = req.execute()
+
+        return(resp)
+
+    def update_spreadsheet(self, update_data):
         header_cols = self.find_column_headers(update_data.keys())
         last_row = self.find_last_row(header_cols.iteritems().next()[1]) + 1
 

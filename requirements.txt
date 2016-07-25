@@ -3,3 +3,4 @@ twisted
 gspread
 oauth2client
 PyOpenSSL
+google-api-python-client
