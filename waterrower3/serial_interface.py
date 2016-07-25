@@ -72,11 +72,13 @@ class SerialProtocol(wr3_session.RowerSession):
 
     def connectionMade(self):
         if self.record_datalog:
-            self.datalogfile = open(
-                "datalog2-{}.log"
-                .format(datetime.datetime.now()
-                        .replace(microsecond=0).isoformat()),
-                'w')
+            self.datalogfilename = self.gen_datalog_filename()
+            self.datalogfile = open(self.datalogfilename, 'w')
+
+    def gen_datalog_filename(self):
+        return(
+            "datalog2-{}.log".format(datetime.datetime.now()
+                                     .replace(microsecond=0).isoformat()))
 
     def dataReceived(self, data):
         for c in data:
