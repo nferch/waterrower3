@@ -42,9 +42,10 @@ class RowerSession(protocol.Protocol):
         longest_lull = self.longest("lull")
         longest_interval = self.longest("interval")
         if longest_lull:
-            log.msg("longest lull: {} at {}".format(longest_lull))
+            log.msg("longest lull: {l[0]} at {l[1]}".format(l=longest_lull))
         if longest_interval:
-            log.msg("longest interval: {} at {}".format(longest_interval))
+            log.msg("longest interval: {i[0]} at {i[1]}".format(
+                i=longest_interval))
         log.msg("total time: {}".format(self.total_time()))
         log.msg("total distance: {}".format(self.total_distance()))
 
